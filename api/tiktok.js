@@ -6,20 +6,34 @@ export default async function handler(req, res) {
     if (!user)
       return res.status(400).json({ error: "Missing ?user parameter" });
 
-    const rssUrl = `https://rsshub.app/tiktok/user/${user}`;
-    const response = await fetch(rssUrl, {
+    // 🩵 1️⃣ primer intento: servidor principal de RSSHub
+    const primary = `https://rsshub.app/tiktok/user/${user}`;
+    let response = await fetch(primary, {
       headers: {
         "User-Agent":
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
       },
     });
 
+    // 🩸 2️⃣ si el principal falla, intentar con un mirror alternativo
     if (!response.ok) {
-      return res.status(response.status).json({
-        error: `TikTok RSS error: ${response.statusText} (${response.status})`,
+      console.warn(`⚠️ RSSHub principal falló (${response.status}), usando mirror...`);
+      const backup = `https://rsshub.moeyy.cn/tiktok/user/${user}`;
+      response = await fetch(backup, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        },
       });
     }
 
+    if (!response.ok) {
+      return res
+        .status(response.status)
+        .json({ error: `All RSSHub servers failed (${response.status})` });
+    }
+
+    // 🕯️ procesar el XML
     const xml = await response.text();
     const match = xml.match(/https:\/\/www\.tiktok\.com\/@[^/]+\/video\/\d+/);
 
@@ -29,7 +43,7 @@ export default async function handler(req, res) {
 
     res.status(200).json({
       latest: match[0],
-      source: rssUrl,
+      source: "RSSHub (with fallback)",
     });
   } catch (err) {
     console.error("❌ Error interno:", err.message);

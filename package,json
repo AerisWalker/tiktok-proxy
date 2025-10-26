@@ -1,0 +1,10 @@
+{
+  "name": "tiktok-proxy",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "api/tiktok.js",
+  "dependencies": {
+    "tiktok-signature": "^2.0.0",
+    "node-fetch": "^3.3.2"
+  }
+}
